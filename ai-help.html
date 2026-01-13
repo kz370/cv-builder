@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Import Instructions - CV Builder</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #f0f2f5; color: #333; padding: 20px; font-family: 'Segoe UI', sans-serif; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2563eb; margin-top: 0; }
+        .step { margin-bottom: 30px; }
+        .step-number { background: #2563eb; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 10px; }
+        .step-title { font-size: 1.2em; font-weight: 600; vertical-align: middle; }
+        .prompt-box { background: #1e293b; color: #e2e8f0; padding: 20px; border-radius: 6px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 0.9em; position: relative; margin-top: 10px; }
+        .btn-copy { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
+        .btn-copy:hover { background: rgba(255,255,255,0.2); }
+        .btn-back { display: inline-block; margin-bottom: 20px; color: #666; text-decoration: none; }
+        .btn-back:hover { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="btn-back">← Back to Admin Panel</a>
+        <h1>AI CV Import</h1>
+        <p>You can use ChatGPT, Claude, or Gemini to automatically convert your existing CV (text or file) into the format required by this builder.</p>
+        
+        <div class="step">
+            <span class="step-number">1</span> <span class="step-title">Copy the Prompt</span>
+            <p>Copy the text below to your clipboard.</p>
+            <div class="prompt-box">
+                <button class="btn-copy" onclick="copyPrompt(this)">Copy Prompt</button>
+                <div id="ai-prompt-text">
+I need you to convert my CV/Resume text into a specific JSON format compatible with a custom CV builder.
+
+Here is the JSON structure you MUST follow. Please populate it with the information from my CV text provided below.
+
+**JSON Structure:**
+```json
+{
+  "meta": {
+    "header_name": "Full Name",
+    "header_role": "Current Job Title",
+    "header_location": "City, Country",
+    "header_email": "email@example.com",
+    "header_phone": "+1 234 567 890",
+    "header_linkedin": "linkedin.com/in/username",
+    "profile_summary": "A brief professional summary...",
+    "section_order": "[\"profile\",\"skills\",\"experience\",\"packages\",\"education\",\"certifications\",\"languages\"]"
+  },
+  "skills": [
+    { "id": 1, "category": "Languages", "content": "PHP, JavaScript, Python", "sort_order": 0 },
+    { "id": 2, "category": "Frameworks", "content": "Laravel, Vue.js, React", "sort_order": 1 }
+  ],
+  "experience": [
+    { "id": 1, "role": "Job Title", "company": "Company Name", "location": "City, Country", "date_range": "Jan 2020 - Present", "sort_order": 0 },
+    { "id": 2, "role": "Previous Job", "company": "Old Company", "location": "City, Country", "date_range": "Jan 2018 - Dec 2019", "sort_order": 1 }
+  ],
+  "experience_items": [
+    { "id": 1, "experience_id": 1, "item_type": "bullet", "content": "Description of a responsibility or achievement.", "sort_order": 0 },
+    { "id": 2, "experience_id": 1, "item_type": "project", "project_name": "Project Alpha", "content": "Built a CRM system...", "sort_order": 1 }
+  ],
+  "packages": [
+    { "id": 1, "name": "Project/Package Name", "type": "Open Source", "description": "Brief description.", "url": "https://github.com/...", "sort_order": 0 }
+  ],
+  "education": [
+    { "id": 1, "degree": "Degree Name", "institution": "University/College", "date_range": "2015 - 2019", "sort_order": 0 }
+  ],
+  "certifications": [
+    { "id": 1, "name": "Cert Name", "sort_order": 0 }
+  ],
+  "languages": [
+    { "id": 1, "language": "English", "proficiency": "Fluent", "sort_order": 0 }
+  ],
+  "header_extras": [],
+  "custom_sections": []
+}
+```
+
+**Instructions:**
+Please extract the information from the attached CV file (PDF, Image, or Docx) or the text provided below, and map it to the JSON structure defined above.
+1. Assign sequential numeric IDs.
+2. Link `experience_items` to `experience` via `experience_id`.
+3. Output ONLY the raw JSON string.
+
+**My CV Text (if not attaching a file):**
+[PASTE YOUR CV TEXT HERE OR ATTACH FILE]
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <span class="step-number">2</span> <span class="step-title">Paste to AI</span>
+            <p>Go to ChatGPT/Claude/Gemini, paste the prompt, and then attach your CV file (PDF/Image) or paste your CV text.</p>
+        </div>
+
+        <div class="step">
+            <span class="step-number">3</span> <span class="step-title">Import JSON</span>
+            <p>Copy the JSON code the AI gives you. Go to the <strong>Import / Export</strong> tab in the Admin Panel, select <strong>"Import JSON"</strong>, paste the code, and click Import.</p>
+        </div>
+    </div>
+
+    <script>
+        function copyPrompt(btn) {
+            const text = document.getElementById('ai-prompt-text').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.innerText = 'Copied!';
+                setTimeout(() => btn.innerText = 'Copy Prompt', 2000);
+            });
+        }
+    </script>
+</body>
+</html>
