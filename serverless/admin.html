@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Editor</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            /* Palette: Slate/Blue */
+            --primary: #3b82f6; --primary-hover: #2563eb; --primary-light: #eff6ff;
+            --secondary: #64748b; --bg-body: #f3f4f6; --bg-sidebar: #1e293b;
+            --bg-surface: #ffffff; --border-color: #e5e7eb; --text-main: #111827;
+            --text-muted: #6b7280; --danger: #ef4444; --sidebar-width: 280px;
+        }
+        /* Basic Reset & Typography */
+        * { box-sizing: border-box; outline: none; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
+        h1, h2, h3, h4 { margin: 0; font-weight: 600; }
+        a { text-decoration: none; color: inherit; transition: 0.2s; cursor: pointer; }
+        ul { list-style: none; padding: 0; margin: 0; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: #e2e8f0; display: flex; flex-direction: column; border-right: 1px solid #0f172a; z-index: 50; }
+        .sidebar-header { padding: 24px; border-bottom: 1px solid #334155; background: rgba(0,0,0,0.1); }
+        .sidebar-header h2 { font-size: 1.1rem; letter-spacing: 0.5px; color: #fff; }
+        .nav { flex: 1; padding-top: 10px; overflow-y: auto; }
+        .nav a { display: flex; align-items: center; padding: 12px 24px; font-weight: 500; border-left: 3px solid transparent; }
+        .nav a:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .nav a.active { background: rgba(255,255,255,0.1); color: #fff; border-left-color: var(--primary); }
+        .nav-footer { padding: 20px; border-top: 1px solid #334155; background: rgba(0,0,0,0.2); }
+
+        /* Main Content */
+        .main { flex: 1; padding: 40px; overflow-y: auto; position: relative; transition: margin-right 0.3s ease; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { font-size: 1.75rem; color: var(--text-main); }
+        
+        .card { background: var(--bg-surface); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); }
+        .card h3 { font-size: 1.1rem; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+
+        /* Forms */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+        .form-row.three-col { grid-template-columns: 1fr 1fr 1fr; }
+        .form-group { margin-bottom: 24px; }
+        label { display: block; margin-bottom: 8px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* Catch all text-like inputs including those missing type="text" */
+        input:not([type]), input[type="text"], input[type="email"], textarea, select { 
+            width: 100%; 
+            padding: 10px 14px; 
+            border: 1px solid #e2e8f0; 
+            background: #fff; 
+            border-radius: 8px; 
+            font-size: 0.95rem; 
+            font-family: inherit; 
+            color: var(--text-main);
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        input:focus, textarea:focus, select:focus { 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 4px var(--primary-light); 
+        }
+        input:hover, textarea:hover, select:hover {
+            border-color: #cbd5e1;
+        }
+        textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+
+        /* Buttons ... (unchanged) */
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 0.9rem; gap: 8px; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-secondary { background: #fff; color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: #f9fafb; border-color: #d1d5db; }
+        .btn-danger { background: transparent; color: var(--danger); padding: 8px; border: 1px solid transparent; }
+        .btn-danger:hover { background: #fef2f2; border-color: #fee2e2; }
+        .btn-view-site { background: var(--primary); color: #fff; border: none; display: block; width: 100%; padding: 12px; text-align: center; border-radius: 8px; font-weight: 600; }
+        .btn-toggle-preview { background: transparent; border: 1px solid #475569; color: #cbd5e1; margin-top: 12px; display: block; width: 100%; padding: 12px; text-align: center; border-radius: 8px; font-weight: 600; }
+        
+        .input-group { display: flex; align-items: center; }
+        .input-group-addon { background: #f1f5f9; border: 1px solid var(--border-color); border-right: none; padding: 10px 12px; color: var(--text-muted); border-radius: 6px 0 0 6px; font-weight: 500; }
+        .input-group input { border-radius: 0 6px 6px 0 !important; flex: 1; }
+
+        /* List Items */
+        .data-item { display: flex; align-items: center; background: #fff; border: 1px solid var(--border-color); margin-bottom: -1px; padding: 16px; }
+        .data-item:first-child { border-radius: 8px 8px 0 0; }
+        .data-item:last-child { border-radius: 0 0 8px 8px; margin-bottom: 0; }
+        .drag-handle { color: #cbd5e1; margin-right: 16px; cursor: grab; font-size: 1.2rem; }
+        .data-content { flex: 1; margin-right: 16px; width: 100%; }
+
+        /* Preview Panel */
+        .preview-panel { position: fixed; top: 0; right: -55%; width: 55%; height: 100vh; background: #cbd5e1; border-left: 1px solid #94a3b8; box-shadow: -10px 0 25px rgba(0,0,0,0.15); transition: right 0.4s ease; z-index: 200; display: flex; flex-direction: column; }
+        .preview-panel.active { right: 0; }
+        .preview-header { padding: 16px 24px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .preview-content { flex: 1; background: #64748b; padding: 40px; overflow-y: auto; overflow-x: hidden; display: flex; justify-content: center; }
+        #cvFrame { width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.3); border: none; transform-origin: top center; overflow: hidden; }
+        body.preview-active .main { margin-right: 55%; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header"><h2>CV Builder</h2></div>
+        <nav class="nav">
+            <a onclick="setTab('meta')" id="nav-meta">📝 Header & Meta</a>
+            <a onclick="setTab('experience')" id="nav-experience">💼 Experience</a>
+            <a onclick="setTab('skills')" id="nav-skills">🛠 Skills</a>
+            <a onclick="setTab('education')" id="nav-education">🎓 Education & Certs</a>
+            <a onclick="setTab('packages')" id="nav-packages">📦 Projects</a>
+            <a onclick="setTab('languages')" id="nav-languages">🌐 Languages</a>
+            <a onclick="setTab('sections')" id="nav-sections">🔃 Layout & Sections</a>
+            <a onclick="setTab('import')" id="nav-import">💾 Import / Export</a>
+        </nav>
+        <div class="nav-footer">
+            <button class="btn-view-site" onclick="window.open('index.html','_blank')">View Site ↗</button>
+            <button class="btn-toggle-preview" onclick="togglePreview()">👁 Toggle Preview</button>
+        </div>
+    </div>
+
+    <div class="main" id="app-root">
+        <!-- Dynamic Content -->
+    </div>
+
+    <div class="preview-panel" id="previewPanel">
+        <div class="preview-header">
+             <span id="pageStats" style="margin-right:20px; font-size:12px; color:#666;"></span>
+             <button class="btn btn-secondary" onclick="document.getElementById('cvFrame').contentWindow.location.reload()">Refresh</button>
+        </div>
+        <div class="preview-content">
+             <iframe src="index.html?preview=1" id="cvFrame"></iframe>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        let data = { meta: {}, skills: [], experience: [], experience_items: [], education: [], certifications: [], languages: [], header_extras: [], custom_sections: [], packages: [] };
+        let currentTab = 'meta';
+        let editingJobId = null; // State for experience tab
+
+        function loadData() {
+            const saved = localStorage.getItem('cv_data');
+            if(saved) {
+                try { data = JSON.parse(saved); } catch(e) {}
+            }
+            // Defaults
+            if(!data.meta) data.meta = { header_name: "", header_role: "", section_order: "[]" };
+            ['skills','experience','experience_items','education','certifications','languages','header_extras','custom_sections','packages'].forEach(k => {
+                if(!data[k]) data[k] = [];
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('cv_data', JSON.stringify(data));
+            refreshPreview();
+            // Don't re-render entire tab on every keystroke, let inputs handle their state
+            // But we might need to if adding/removing items
+            showToast("Saved");
+        }
+        function showToast(m){console.log(m);}
+
+        // --- View Logic ---
+        function setTab(tab) {
+            currentTab = tab;
+            editingJobId = null; // Reset sub-views
+            document.querySelectorAll('.nav a').forEach(el => el.classList.remove('active'));
+            document.getElementById('nav-' + tab).classList.add('active');
+            renderTab();
+        }
+
+        function renderTab() {
+            const root = document.getElementById('app-root');
+            let html = '';
+
+            if (currentTab === 'meta') {
+                const m = data.meta;
+                html = `
+                <div class="header"><h1>Header & Profile</h1></div>
+                <div class="card">
+                    <h3>Main Details</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>Name</label><input type="text" oninput="updateMeta('header_name', this.value)" value="${escape(m.header_name||'')}"></div>
+                        <div class="form-group"><label>Role</label><input type="text" oninput="updateMeta('header_role', this.value)" value="${escape(m.header_role||'')}"></div>
+                    </div>
+                     <div class="form-row">
+                        <div class="form-group"><label>Location</label><input type="text" oninput="updateMeta('header_location', this.value)" value="${escape(m.header_location||'')}"></div>
+                        <div class="form-group"><label>Phone</label><input type="text" oninput="updateMeta('header_phone', this.value)" value="${escape(m.header_phone||'')}"></div>
+                    </div>
+                     <div class="form-row">
+                        <div class="form-group"><label>Email</label><input type="text" oninput="updateMeta('header_email', this.value)" value="${escape(m.header_email||'')}"></div>
+                        <div class="form-group"><label>LinkedIn</label>
+                            <div class="input-group">
+                                <div class="input-group-addon">https://</div>
+                                <input type="text" onchange="updateMetaLinkedIn(this.value)" value="${escape(m.header_linkedin||'')}" placeholder="linkedin.com/in/username">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Summary</label><textarea rows="5" oninput="updateMeta('profile_summary', this.value)">${escape(m.profile_summary||'')}</textarea></div>
+                </div>
+                
+                <div class="card">
+                     <h3>Custom Header Fields</h3>
+                     <div id="header-extras-list">${renderExpanderList(data.header_extras, 'header_extras', ['label','value','url'])}</div>
+                     <div style="padding:16px;">
+                         <h4>Add New Field</h4>
+                         <form onsubmit="addItem('header_extras', event)" class="form-row three-col" style="align-items:end;">
+                            <div class="form-group"><label>Label</label><input type="text" name="label" placeholder="e.g. Portfolio"></div>
+                            <div class="form-group"><label>Value</label><input type="text" name="value" placeholder="Display Text" required></div>
+                            <div class="form-group"><label>URL</label><input type="text" name="url" placeholder="https://..."></div>
+                            <button class="btn btn-primary" style="grid-column: 1 / -1; width: auto; justify-self: start;">Add Field</button>
+                         </form>
+                     </div>
+                </div>`;
+            } 
+            else if (currentTab === 'skills') {
+                html = `
+                <div class="header"><h1>Technical Skills</h1></div>
+                <div class="card">
+                    <h3>Manage Skills</h3>
+                    <div id="skills-list">${renderExpanderList(data.skills, 'skills', ['category','content'], {category: {width:'150px', bold:true}, content:{flex:1}})}</div>
+                    <div style="padding:16px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                         <h4>Add New Skill Group</h4>
+                        <form onsubmit="addItem('skills', event)" style="display:flex; gap:10px; align-items:flex-end;">
+                            <div style="width:200px;"><label>Category</label><input type="text" name="category" placeholder="e.g. Languages" required></div>
+                            <div style="flex:1;"><label>Skills List</label><input type="text" name="content" placeholder="PHP, JS, Python..." required></div>
+                            <button class="btn btn-primary" style="margin-bottom:2px;">Add</button>
+                        </form>
+                    </div>
+                </div>`;
+            } 
+            else if (currentTab === 'experience') {
+                if(editingJobId) {
+                    // --- Detail View ---
+                    const exp = data.experience.find(e => e.id == editingJobId);
+                    if(!exp) { editingJobId=null; renderTab(); return; } // fallback
+
+                    html = `
+                    <div class="header">
+                        <h1>Edit Role</h1>
+                        <button onclick="{editingJobId=null; renderTab();}" class="btn btn-secondary">← Back</button>
+                    </div>
+                    <div class="card">
+                         <div class="form-row">
+                             <div class="form-group"><label>Company</label><input type="text" value="${escape(exp.company)}" onchange="updateItem('experience', ${exp.id}, 'company', this.value)"></div>
+                             <div class="form-group"><label>Role</label><input type="text" value="${escape(exp.role)}" onchange="updateItem('experience', ${exp.id}, 'role', this.value)"></div>
+                         </div>
+                         <div class="form-row">
+                              <div class="form-group"><label>Location</label><input type="text" value="${escape(exp.location)}" onchange="updateItem('experience', ${exp.id}, 'location', this.value)"></div>
+                              <div class="form-group"><label>Date Range</label><input type="text" value="${escape(exp.date_range)}" onchange="updateItem('experience', ${exp.id}, 'date_range', this.value)"></div>
+                         </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Highlights & Projects</h3>
+                        <div id="exp-items-list">
+                        ${(data.experience_items||[]).filter(i => i.experience_id == exp.id).sort((a,b)=>a.sort_order-b.sort_order).map(item => `
+                            <div class="data-item" data-id="${item.id}">
+                                <div class="drag-handle">☰</div>
+                                <div class="data-content">
+                                    <div style="display:flex; gap:10px; margin-bottom:5px;">
+                                        <select onchange="updateExpItem(${item.id}, 'item_type', this.value)" style="width:120px;">
+                                            <option value="bullet" ${item.item_type=='bullet'?'selected':''}>Bullet</option>
+                                            <option value="project" ${item.item_type=='project'?'selected':''}>Project</option>
+                                        </select>
+                                        <input type="text" value="${escape(item.project_name||'')}" onchange="updateExpItem(${item.id}, 'project_name', this.value)" placeholder="Project Name" style="${item.item_type=='project'?'':'display:none'}">
+                                    </div>
+                                    <textarea onchange="updateExpItem(${item.id}, 'content', this.value)" rows="2">${escape(item.content)}</textarea>
+                                </div>
+                                <div class="data-actions">
+                                     <button onclick="deleteExpItem(${item.id})" class="btn btn-danger">×</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                        </div>
+                        <div style="padding:16px;">
+                            <h4>Add New Highlight</h4>
+                            <form onsubmit="addExpItem(${exp.id}, event)">
+                                <div style="display:flex; gap:10px; margin-bottom:5px;">
+                                    <select name="type" style="width:120px;">
+                                        <option value="bullet">Bullet</option>
+                                        <option value="project">Project</option>
+                                    </select>
+                                    <input type="text" name="project_name" placeholder="Project Name">
+                                </div>
+                                <textarea name="content" rows="2" placeholder="Description..." required></textarea>
+                                <button class="btn btn-primary" style="margin-top:10px;">Add</button>
+                            </form>
+                        </div>
+                    </div>
+                    `;
+                    setTimeout(() => initSortable('exp-items-list', 'experience_items'), 100);
+
+                } else {
+                    // --- List View ---
+                    html = `<div class="header"><h1>Experience</h1></div>`;
+                    html += `<div class="card"><div id="experience-list">`;
+                    
+                    // List
+                    if(data.experience.length === 0) html += `<p class="text-muted" style="padding:20px;">No positions added.</p>`;
+                    data.experience.sort((a,b)=>a.sort_order-b.sort_order).forEach(job => {
+                        html += `
+                        <div class="data-item" data-id="${job.id}">
+                            <div class="drag-handle">☰</div>
+                            <div class="data-content" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div><strong>${escape(job.company)}</strong><br><small>${escape(job.role)}</small></div>
+                                <button onclick="{editingJobId=${job.id}; renderTab();}" class="btn btn-secondary">Edit</button>
+                            </div>
+                            <div class="data-actions">
+                                <button onclick="deleteItem('experience', ${job.id})" class="btn btn-danger">×</button>
+                            </div>
+                        </div>`;
+                    });
+
+                    html += `</div>
+                    <div style="padding:16px;">
+                        <h4>Add New Position</h4>
+                        <form onsubmit="addItem('experience', event)">
+                            <div class="form-row">
+                                <div class="form-group"><label>Company</label><input type="text" name="company" placeholder="Company" required></div>
+                                <div class="form-group"><label>Role</label><input type="text" name="role" placeholder="Role" required></div>
+                            </div>
+                            <button class="btn btn-primary">Create Job</button>
+                        </form>
+                    </div></div>`;
+                    setTimeout(() => initSortable('experience-list', 'experience'), 100);
+                }
+            } 
+            else if (currentTab === 'education') {
+                 html = `<div class="header"><h1>Education & Certs</h1></div>`;
+                 html += `<div class="card"><h3>Education</h3><div id="edu-list">${renderExpanderList(data.education, 'education', ['degree','institution','date_range'])}</div>
+                 <div style="padding:16px;">
+                     <h4>Add Education</h4>
+                     <form onsubmit="addItem('education', event)" class="form-row three-col" style="align-items:end">
+                         <div class="form-group"><label>Degree</label><input type="text" name="degree" placeholder="Degree" required></div>
+                         <div class="form-group"><label>Institution</label><input type="text" name="institution" placeholder="Institution" required></div>
+                         <div class="form-group"><label>Dates</label><input type="text" name="date_range" placeholder="Dates"></div>
+                         <button class="btn btn-primary" style="grid-column:1/-1; width:auto; justify-self:start;">Add</button>
+                     </form>
+                 </div></div>`;
+                 
+                 html += `<div class="card"><h3>Certifications</h3><div id="cert-list">${renderExpanderList(data.certifications, 'certifications', ['name'])}</div>
+                 <div style="padding:16px;">
+                     <h4>Add Certification</h4>
+                     <form onsubmit="addItem('certifications', event)" class="form-row" style="align-items:end">
+                         <div class="form-group"><label>Certification Name</label><input type="text" name="name" placeholder="Name" required></div>
+                         <button class="btn btn-primary" style="height:45px; margin-bottom:24px;">Add</button>
+                     </form>
+                 </div></div>`;
+            }
+            else if (currentTab === 'packages') {
+                 html = `<div class="header"><h1>Projects</h1></div>
+                 <div class="card">
+                    <h3>Manage Projects</h3>
+                    <div id="pkg-list">${renderExpanderList(data.packages, 'packages', ['name','type','description','url'], {type:{width:'120px'}})}</div>
+                    <div style="padding:16px;">
+                        <h4>Add Project</h4>
+                        <form onsubmit="addItem('packages', event)" class="form-row three-col" style="align-items:end;">
+                             <div class="form-group"><label>Project Name</label><input type="text" name="name" placeholder="Name" required></div>
+                             <div class="form-group"><label>Type</label><input type="text" name="type" placeholder="e.g. Open Source" required></div>
+                             <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="Description" required></div>
+                             <div class="form-group"><label>URL</label><input type="text" name="url" placeholder="https://..." required></div>
+                             <button class="btn btn-primary" style="grid-column: 1 / -1; width:auto; justify-self:start;">Add</button>
+                        </form>
+                    </div>
+                 </div>`;
+                 setTimeout(() => initSortable('pkg-list', 'packages'), 100);
+            }
+            else if (currentTab === 'languages') {
+                 const levels = ['Native', 'Fluent', 'Proficient (C2)', 'Advanced (C1)', 'Intermediate (B2)', 'Conversational (B1)', 'Basic (A1/A2)'];
+                 const avail = ['Arabic', 'Chinese', 'Dutch', 'English', 'French', 'German', 'Hindi', 'Italian', 'Japanese', 'Korean', 'Portuguese', 'Russian', 'Spanish', 'Turkish'];
+                 
+                 const renderLanguageItems = () => {
+                     if(!data.languages.length) return `<div style="padding:16px; color:#666;">No items found.</div>`;
+                     return data.languages.map(item => `
+                        <div class="data-item" data-id="${item.id}">
+                            <div class="drag-handle">☰</div>
+                            <div class="data-content" style="display:flex; gap:10px;">
+                                <div style="flex:1">
+                                    <input type="text" value="${escape(item.language||'')}" disabled style="width:100%; font-weight:600; background:#f1f5f9; cursor:not-allowed; color:#64748b;">
+                                </div>
+                                <div style="flex:1">
+                                    <select onchange="updateItem('languages', ${item.id}, 'proficiency', this.value)" style="width:100%">
+                                        <option value="">Select Level</option>
+                                        ${levels.map(l => `<option value="${l}" ${item.proficiency===l?'selected':''}>${l}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                             <div class="data-actions"><button onclick="deleteItem('languages', ${item.id})" class="btn btn-danger">×</button></div>
+                        </div>
+                    `).join('');
+                 };
+
+                 html = `<div class="header"><h1>Languages</h1></div>
+                 <div class="card">
+                    <h3>Known Languages</h3>
+                    <datalist id="lang-suggestions">${avail.map(l=>`<option value="${l}">`).join('')}</datalist>
+                    <div id="langs-list">${renderLanguageItems()}</div>
+                 </div>
+                 <div class="card" style="padding:24px;">
+                    <h4>Add Language</h4>
+                    <form onsubmit="addItem('languages', event)" class="form-row" style="align-items:end;">
+                    <div class="form-group"><label>Language</label><select name="language" required><option value="">Select...</option>${avail.map(l=>`<option>${l}</option>`).join('')}<option>Other</option></select></div>
+                    <div class="form-group"><label>Proficiency</label><select name="proficiency" required><option value="">Level</option>${levels.map(l=>`<option>${l}</option>`).join('')}</select></div>
+                    <button class="btn btn-primary" style="height:45px; margin-bottom:24px;">Add</button>
+                 </form></div>`;
+            }
+            else if (currentTab === 'sections') {
+                html = `<div class="header"><h1>Layout & Sections</h1></div><div class="card"><h3>Reorder Sections</h3><div id="sections-list">...</div></div>`; 
+                // Simplified for brevity, logic remains similar but using simple list
+                // For now, re-implementing basic section reordering
+                 const sections = [
+                    {id:'profile', t:'Profile'}, {id:'skills', t:'Skills'}, {id:'experience', t:'Experience'},
+                    {id:'packages', t:'Open Source'}, {id:'education', t:'Education'}, {id:'certifications', t:'Certifications'},
+                    {id:'languages', t:'Languages'}
+                 ];
+                 (data.custom_sections||[]).forEach(cs => sections.push({id:'custom_'+cs.id, t:cs.title+' (Custom)'}));
+                 let order = [];
+                 try { const saved = JSON.parse(data.meta.section_order||'[]'); saved.forEach(id => { const s = sections.find(x=>x.id==id); if(s) order.push(s); }); } catch(e){}
+                 sections.forEach(s => { if(!order.find(x=>x.id==s.id)) order.push(s); });
+                 
+                 html = `<div class="header"><h1>Layout & Sections</h1></div>
+                 <div class="card">
+                    <h3>Section Order</h3>
+                    <p class="text-muted" style="margin-bottom:15px">Drag and drop to reorder sections on your CV.</p>
+                    <div id="section-sort-list">
+                        ${order.map(s => `
+                            <div class="data-item" data-id="${s.id}">
+                                <div class="drag-handle">☰</div>
+                                <div class="data-content"><strong>${s.t}</strong></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                 </div>
+                 
+                 <div class="card">
+                    <h3>Manage Custom Sections</h3>
+                    ${data.custom_sections.length === 0 ? '<p class="text-muted" style="padding:16px;">No custom sections added.</p>' : ''}
+                    ${data.custom_sections.map(sec => `
+                        <div class="data-item" style="display:block; padding:24px;">
+                            <div class="form-group">
+                                <label>Section Title</label>
+                                <input type="text" value="${escape(sec.title)}" onchange="updateItem('custom_sections', ${sec.id}, 'title', this.value)" placeholder="e.g. Publications">
+                            </div>
+                            <div class="form-group">
+                                <label>Content</label>
+                                <textarea rows="4" onchange="updateItem('custom_sections', ${sec.id}, 'content', this.value)" placeholder="Content...">${escape(sec.content)}</textarea>
+                            </div>
+                            <div style="text-align:right;">
+                                <button onclick="deleteItem('custom_sections', ${sec.id})" class="btn btn-danger" style="color:var(--danger)">Delete Section</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    
+                    <div style="padding:24px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                        <h4>Create New Section</h4>
+                        <form onsubmit="addItem('custom_sections', event)">
+                            <div class="form-group"><input type="text" name="title" placeholder="Title (e.g. Publications)" required></div>
+                            <div class="form-group"><textarea name="content" placeholder="Content..." rows="3" required></textarea></div>
+                            <button class="btn btn-primary">Create Section</button>
+                        </form>
+                    </div>
+                 </div>`;
+                 setTimeout(() => initSortable('section-sort-list', 'section_order'), 100);
+            }
+            else if (currentTab === 'import') {
+                html = `<div class="header"><h1>Import / Export</h1></div>
+                <div class="card">
+                    <h3>Backup</h3>
+                    <p class="text-muted" style="margin-bottom:15px">Download your CV data as a JSON file to transfer between devices.</p>
+                    <button class="btn btn-primary" onclick="exportData()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:6px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download JSON
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <h3>Restore</h3>
+                    <p class="text-muted" style="margin-bottom:15px">Upload a previously saved <code>cv_data.json</code> file to restore your data.</p>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label class="btn btn-secondary" style="cursor:pointer; position:relative;">
+                            <input type="file" id="importFile" onchange="importData()" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:6px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Select JSON File...
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="card" style="border-color: #fee2e2; background: #fef2f2;">
+                    <h3 style="color: #991b1b; border-color: #fca5a5;">Danger Zone</h3>
+                    <p style="color: #7f1d1d; margin-bottom: 15px;">Clear all local data and reset to defaults. This cannot be undone.</p>
+                    <button class="btn btn-danger" style="background: #ef4444; color: white;" onclick="clearData()">⚠️ Clear Data & Reset</button>
+                </div>`;
+            }
+
+            root.innerHTML = html;
+        }
+
+        // --- Helpers ---
+        function clearData() {
+            if(confirm("Are you sure you want to delete all your saved CV data? This action cannot be undone.")) {
+                if(confirm("Really sure? All changes will be lost.")) {
+                    localStorage.removeItem('cv_data');
+                    location.reload();
+                }
+            }
+        }
+        function renderExpanderList(items, table, fields, styles={}) {
+            if(!items || !items.length) return `<div style="padding:16px; color:#666;">No items found.</div>`;
+            return items.map(item => `
+                <div class="data-item" data-id="${item.id}">
+                    <div class="drag-handle">☰</div>
+                    <div class="data-content" style="display:flex; gap:10px;">
+                        ${fields.map(f => {
+                            const s = styles[f] || {};
+                            return `<input type="text" value="${escape(item[f]||'')}" onchange="updateItem('${table}', ${item.id}, '${f}', this.value)" style="${s.width?'width:'+s.width: 'flex:1'}; ${s.bold?'font-weight:600':''}" placeholder="${f}">`;
+                        }).join('')}
+                    </div>
+                     <div class="data-actions"><button onclick="deleteItem('${table}', ${item.id})" class="btn btn-danger">×</button></div>
+                </div>
+            `).join('');
+        }
+
+        function updateItem(table, id, field, val) {
+            const item = data[table].find(i => i.id == id);
+            if(item) { item[field] = val; saveData(); }
+        }
+        function updateMeta(k, v) { data.meta[k] = v; saveData(); }
+        function updateMetaLinkedIn(v) { updateMeta('header_linkedin', v.replace(/^https?:\/\//,'')); }
+        
+        function addItem(table, e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const obj = { id: Date.now(), sort_order: 999 };
+            for(let [k,v] of fd.entries()) obj[k] = v;
+            data[table].push(obj);
+            saveData();
+            if(editingJobId && table==='experience') { renderTab(); return; } // prevent view switch
+            if(table === 'experience') { e.target.reset(); renderTab(); } // Refresh list
+            else { e.target.reset(); renderTab(); }
+        }
+        function deleteItem(table, id) {
+            if(!confirm("Delete?")) return;
+            data[table] = data[table].filter(i=>i.id!=id);
+            saveData();
+            renderTab();
+        }
+        
+        function addExpItem(expId, e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            data.experience_items.push({
+                id: Date.now(), experience_id: expId, sort_order: 999,
+                item_type: fd.get('type'), project_name: fd.get('project_name'), content: fd.get('content')
+            });
+            saveData();
+            renderTab(); // Refresh detail view
+        }
+        function updateExpItem(id, field, val) {
+            const i = data.experience_items.find(x=>x.id==id);
+            if(i) { i[field] = val; saveData(); }
+            // If dragging visibility changes (project vs bullet), might want to re-render, but inputs handle it ok for now
+            if(field === 'item_type') renderTab();
+        }
+        function deleteExpItem(id) {
+            data.experience_items = data.experience_items.filter(x=>x.id!=id);
+            saveData();
+            renderTab();
+        }
+
+        function initSortable(elId, table) {
+            const el = document.getElementById(elId);
+            if(!el) return;
+            new Sortable(el, { handle: '.drag-handle', animation: 150, onEnd: function() {
+                 const ids = Array.from(el.children).map(c => c.getAttribute('data-id'));
+                 if(table === 'section_order') {
+                     data.meta.section_order = JSON.stringify(ids);
+                 } else {
+                     ids.forEach((id, idx) => {
+                         const item = data[table].find(x=>x.id==id);
+                         if(item) item.sort_order = idx;
+                     });
+                 }
+                 saveData();
+            }});
+        }
+
+        function escape(s) { return s ? s.toString().replace(/"/g, '&quot;') : ''; }
+        function togglePreview() {
+            document.body.classList.toggle('preview-active');
+            document.getElementById('previewPanel').classList.toggle('active');
+        }
+        
+        // Preview logic
+        const A4_HEIGHT_PX = 1122;
+        function refreshPreview() {
+            const iframe = document.getElementById('cvFrame');
+            if(iframe && iframe.contentWindow && iframe.contentWindow.render) {
+                iframe.contentWindow.render();
+                setTimeout(()=>fitPreview(iframe), 100);
+            }
+        }
+        function fitPreview(iframe) {
+             const doc = iframe.contentDocument || iframe.contentWindow.document;
+             if (!doc) return;
+             const container = doc.querySelector('.cv-container');
+             const height = container ? container.offsetHeight : 0;
+             if(height) {
+                 iframe.style.height = (height + 50) + 'px';
+                 const pageCount = Math.ceil(height / A4_HEIGHT_PX);
+                 document.getElementById('pageStats').innerHTML = `Height: ${height}px (~${pageCount} Page${pageCount>1?'s':''})`;
+             }
+             // Scale
+             const wrapper = iframe.parentElement;
+             const avail = wrapper.offsetWidth - 80;
+             const needed = (container?container.offsetWidth:794) + 40;
+             if(needed > avail) {
+                 const scale = avail/needed;
+                 iframe.style.transform = `scale(${scale})`;
+                 iframe.style.marginBottom = `-${height*(1-scale)}px`;
+             } else { iframe.style.transform = 'none'; iframe.style.marginBottom=0; }
+        }
+        document.getElementById('cvFrame').onload = function() { fitPreview(this); };
+        window.addEventListener('resize', () => { fitPreview(document.getElementById('cvFrame')); });
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='cv_data.json'; a.click();
+        }
+        function importData() {
+             const file = document.getElementById('importFile').files[0];
+             const r = new FileReader();
+             r.onload = e => { 
+                 try { 
+                     const imported = JSON.parse(e.target.result); 
+                     
+                     // Compatibility: Handle PHP-exported "Meta" which is an array of {key, value}
+                     if(imported.meta && Array.isArray(imported.meta)) {
+                         const metaObj = {};
+                         imported.meta.forEach(row => {
+                             if(row.key) metaObj[row.key] = row.value;
+                         });
+                         imported.meta = metaObj;
+                     }
+
+                     // Intelligent mapping for potentially different JSON structures
+                     if(!imported.meta && imported.name) {
+                         // Potentially a flat structure or different format?
+                         // Let's create a meta object from root properties if they exist
+                         imported.meta = {
+                             header_name: imported.name || imported.header_name || "",
+                             header_role: imported.role || imported.header_role || "",
+                             header_location: imported.location || imported.header_location || "",
+                             header_email: imported.email || imported.header_email || "",
+                             header_phone: imported.phone || imported.header_phone || "",
+                             header_linkedin: imported.linkedin || imported.header_linkedin || "",
+                             profile_summary: imported.summary || imported.profile_summary || ""
+                         };
+                     }
+                     // Or if meta exists but has old keys (or keys that were just converted)
+                     if(imported.meta) {
+                         if(!imported.meta.header_name && imported.meta.name) imported.meta.header_name = imported.meta.name;
+                         if(!imported.meta.header_role && imported.meta.role) imported.meta.header_role = imported.meta.role;
+                         if(!imported.meta.header_location && imported.meta.location) imported.meta.header_location = imported.meta.location;
+                         if(!imported.meta.header_email && imported.meta.email) imported.meta.header_email = imported.meta.email;
+                         if(!imported.meta.header_phone && imported.meta.phone) imported.meta.header_phone = imported.meta.phone;
+                         if(!imported.meta.header_linkedin && imported.meta.linkedin) imported.meta.header_linkedin = imported.meta.linkedin;
+                         if(!imported.meta.profile_summary && imported.meta.summary) imported.meta.profile_summary = imported.meta.summary;
+                     }
+
+                     data = imported;
+                     // Ensure defaults
+                     if(!data.meta) data.meta = {};
+                     ['skills','experience','experience_items','education','certifications','languages','header_extras','custom_sections','packages'].forEach(k => {
+                        if(!data[k]) data[k] = [];
+                     });
+                     saveData(); 
+                     alert('CV Data restored successfully!');
+                     location.reload(); 
+                 } catch(err){
+                     console.error(err);
+                     alert('Error importing file: ' + err.message);
+                 } 
+             };
+             r.readAsText(file);
+        }
+
+        // Init
+        loadData();
+        setTab('meta');
+    </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        html, body { overflow-x: hidden; width: 100%; margin: 0; }
+        .loading { text-align: center; padding: 50px; color: #666; }
+        /* Highlight updated elements */
+        .highlight-update { animation: flashHighlight 1s ease-out; }
+        @keyframes flashHighlight { 0% { background-color: #fef08a; } 100% { background-color: transparent; } }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <a href="admin.html" class="btn-floating btn-secondary" title="Edit CV">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
+            Edit
+        </a>
+        <button onclick="window.print()" class="btn-floating" title="Print / Save PDF">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+            Print
+        </button>
+    </div>
+
+    <div class="cv-container" id="cv-root">
+        <div class="loading">Loading CV...</div>
+    </div>
+
+    <script>
+        const DEFAULT_DATA = {
+            meta: {
+                header_name: "Your Name",
+                header_role: "Professional Role",
+                header_location: "City, Country",
+                header_email: "email@example.com",
+                header_phone: "+1 234 567 890",
+                header_linkedin: "linkedin.com/in/username",
+                profile_summary: "Experienced professional with a proven track record...",
+                section_order: JSON.stringify(['profile', 'skills', 'experience', 'packages', 'education', 'certifications', 'languages','custom_sections'])
+            },
+            skills: [
+                { id: 1, category: "Languages", content: "PHP, JavaScript, Python", sort_order: 0 },
+                { id: 2, category: "Tools", content: "Git, Docker, MySQL", sort_order: 1 }
+            ],
+            experience: [
+                { id: 1, role: "Senior Developer", company: "Tech Corp", location: "Remote", date_range: "2020 - Present", sort_order: 0 }
+            ],
+            experience_items: [
+                { id: 1, experience_id: 1, item_type: "bullet", content: "Led a team of 5 developers.", sort_order: 0 }
+            ],
+            packages: [],
+            education: [],
+            certifications: [],
+            languages: [],
+            custom_sections: [],
+            header_extras: []
+        };
+
+        function getData() {
+            const saved = localStorage.getItem('cv_data');
+            return saved ? JSON.parse(saved) : DEFAULT_DATA;
+        }
+
+        function render() {
+            const data = getData();
+            const root = document.getElementById('cv-root');
+            let html = '';
+
+            // --- Header ---
+            const m = data.meta;
+            html += `
+            <header class="header">
+                <h1 id="cv-name">${escape(m.header_name)}</h1>
+                <div class="role" id="cv-role">${escape(m.header_role)}</div>
+                <div class="contact-info">
+                    ${m.header_location ? `<span><span id="cv-location">${escape(m.header_location)}</span></span> | ` : ''}
+                    ${m.header_phone ? `<span><span id="cv-phone">${escape(m.header_phone)}</span></span> | ` : ''}
+                    ${m.header_email ? `<span><span id="cv-email"><a href="mailto:${escape(m.header_email)}">${escape(m.header_email)}</a></span></span>` : ''}
+                    ${m.header_linkedin ? `<br><span><span id="cv-linkedin"><a href="https://${escape(m.header_linkedin)}" target="_blank">${escape(m.header_linkedin)}</a></span></span>` : ''}
+                    ${renderHeaderExtras(data.header_extras)}
+                </div>
+                <hr>
+            </header>`;
+
+            // --- Sections ---
+            let order = ['profile', 'skills', 'experience', 'packages', 'education', 'certifications', 'languages'];
+            try { 
+                if(m.section_order) {
+                    const saved = JSON.parse(m.section_order);
+                    if(saved && saved.length) order = saved;
+                }
+            } catch(e){}
+
+            // Ensure all custom sections are in the order list
+            if(data.custom_sections) {
+                data.custom_sections.forEach(cs => {
+                    const key = 'custom_'+cs.id;
+                    if(!order.includes(key)) order.push(key);
+                });
+            }
+
+            order.forEach(section => {
+                // Custom Sections
+                if(section.startsWith('custom_')) {
+                    const cId = section.replace('custom_', '');
+                    const cs = data.custom_sections.find(x => x.id == cId);
+                    if(cs) {
+                        html += `
+                        <section>
+                            <div class="section-title" data-id="custom-title-${cs.id}">${escape(cs.title)}</div>
+                            <div class="content" data-id="custom-content-${cs.id}">${nl2br(escape(cs.content))}</div>
+                        </section><hr>`;
+                    }
+                    return;
+                }
+
+                switch(section) {
+                    case 'profile':
+                        if(m.profile_summary) {
+                            html += `
+                            <section>
+                                <div class="section-title">PROFILE</div>
+                                <div class="content" id="cv-profile-summary">${nl2br(escape(m.profile_summary))}</div>
+                            </section><hr>`;
+                        }
+                        break;
+                    case 'skills':
+                        if(data.skills.length) {
+                            html += `<section><div class="section-title">TECHNICAL SKILLS</div><div class="content skills-list">`;
+                            data.skills.sort((a,b)=>a.sort_order-b.sort_order).forEach(s => {
+                                html += `<div class="skill-item">
+                                    <span class="skills-label" data-id="skill-category-${s.id}">${escape(s.category)}:</span>
+                                    <span data-id="skill-content-${s.id}">${escape(s.content)}</span>
+                                </div>`;
+                            });
+                            html += `</div></section><hr>`;
+                        }
+                        break;
+                    case 'experience':
+                        if(data.experience.length) {
+                             html += `<section><div class="section-title">PROFESSIONAL EXPERIENCE</div><div class="content">`;
+                             data.experience.sort((a,b)=>a.sort_order-b.sort_order).forEach(exp => {
+                                 html += `<div class="job-block">
+                                    <div class="job-header">
+                                        <div><span class="job-role" data-id="exp-role-${exp.id}">${escape(exp.role)}</span> <span class="job-company" data-id="exp-company-${exp.id}">${escape(exp.company)}</span></div>
+                                        <div><span class="job-location" data-id="exp-location-${exp.id}">${escape(exp.location)}</span> <span class="job-date" data-id="exp-date-${exp.id}">${escape(exp.date_range)}</span></div>
+                                    </div>
+                                    <div class="job-details"><ul>`;
+                                    
+                                 // Items
+                                 const items = data.experience_items.filter(i => i.experience_id == exp.id).sort((a,b)=>a.sort_order-b.sort_order);
+                                 items.forEach(item => {
+                                     let content = `<span data-id="exp-item-content-${item.id}">${escape(item.content)}</span>`;
+                                     if(item.item_type === 'project') {
+                                         html += `<li class="project-item"><span class="project-title" data-id="exp-item-project-${item.id}">${escape(item.project_name)}</span> - ${content}</li>`;
+                                     } else {
+                                         html += `<li>${content}</li>`;
+                                     }
+                                 });
+                                 html += `</ul></div></div>`;
+                             });
+                             html += `</div></section><hr>`;
+                        }
+                        break;
+                     case 'packages':
+                        if(data.packages.length) {
+                            html += `<section><div class="section-title">PROJECTS</div><div class="content">`;
+                            data.packages.sort((a,b)=>a.sort_order-b.sort_order).forEach(pkg => {
+                                html += `<div class="package-item">
+                                    <span class="package-name" data-id="pkg-name-${pkg.id}">${escape(pkg.name)}</span>
+                                    <span style="font-weight: 500; color: #555;"> | ${escape(pkg.type||'Open Source')}</span>
+                                    <span class="package-desc" data-id="pkg-desc-${pkg.id}"> - ${escape(pkg.description)}</span>
+                                </div>`;
+                            });
+                            html += `</div></section><hr>`;
+                        }
+                        break;
+                     case 'education':
+                        if(data.education.length) {
+                            html += `<section><div class="section-title">EDUCATION</div><div class="content">`;
+                             data.education.sort((a,b)=>a.sort_order-b.sort_order).forEach(edu => {
+                                html += `<div class="education-item">
+                                    <div class="edu-main"><span class="edu-degree" data-id="edu-degree-${edu.id}">${escape(edu.degree)}</span> <span class="edu-institution" data-id="edu-institution-${edu.id}">${escape(edu.institution)}</span></div>
+                                    <div class="edu-date" data-id="edu-date-${edu.id}">${escape(edu.date_range)}</div>
+                                </div>`;
+                             });
+                             html += `</div></section><hr>`;
+                        }
+                        break;
+                     case 'certifications':
+                         if(data.certifications && data.certifications.length) {
+                             html += `<section><div class="section-title">CERTIFICATIONS</div><div class="content"><ul>`;
+                             data.certifications.sort((a,b)=>a.sort_order-b.sort_order).forEach(cert => {
+                                 html += `<li data-id="cert-name-${cert.id}">${escape(cert.name)}</li>`;
+                             });
+                             html += `</ul></div></section><hr>`;
+                         }
+                         break;
+                     case 'languages':
+                         if(data.languages && data.languages.length) {
+                             html += `<section><div class="section-title">LANGUAGES</div><div class="content languages-list">`;
+                             data.languages.sort((a,b)=>a.sort_order-b.sort_order).forEach(lang => {
+                                 html += `<div class="language-item">
+                                     <span class="lang-name" data-id="lang-name-${lang.id}">${escape(lang.language)}:</span>
+                                     <span class="lang-proficiency" data-id="lang-proficiency-${lang.id}">${escape(lang.proficiency)}</span>
+                                 </div>`;
+                             });
+                             html += `</div></section><hr>`;
+                         }
+                         break;
+                     default:
+                         if(secId.startsWith('custom_')) {
+                             const cid = secId.replace('custom_', '');
+                             const cs = (data.custom_sections||[]).find(x => x.id == cid);
+                             if(cs) {
+                                  html += `<section><div class="section-title">${escape(cs.title)}</div><div class="content"><div style="white-space: pre-wrap;">${escape(cs.content)}</div></div></section><hr>`;
+                             }
+                         }
+                         break;
+                }
+            });
+
+            root.innerHTML = html;
+        }
+        
+        function renderHeaderExtras(extras) {
+            if(!extras || !extras.length) return '';
+            let html = '';
+            extras.sort((a,b)=>a.sort_order-b.sort_order).forEach(ex => {
+                let val = escape(ex.value);
+                if(ex.url) val = `<a href="${escape(ex.url)}" target="_blank">${val}</a>`;
+                html += ` <br class="mobile-break"><span class="header-extra-item">${ex.label ? `<strong>${escape(ex.label)}:</strong> ` : ''}${val}</span>`;
+            });
+            return html;
+        }
+
+        function escape(str) {
+            if(!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        function nl2br(str) {
+            if(!str) return '';
+            return str.replace(/\n/g, '<br>');
+        }
+        
+        // --- Init ---
+        // Basic checks and defaults
+        const existingInfo = localStorage.getItem('cv_data');
+        if (!existingInfo) {
+             localStorage.setItem('cv_data', JSON.stringify(DEFAULT_DATA));
+        }
+
+        render();
+
+        // Check URL for preview mode
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('preview') === '1') {
+            // Only hide the Edit button in preview mode, keep Print
+             const editBtn = document.querySelector('a[href="admin.html"]');
+             if(editBtn) editBtn.style.display = 'none';
+        }
+        // Listen for storage changes (updates from admin tab)
+        window.addEventListener('storage', (e) => {
+            if(e.key === 'cv_data') render();
+        });
+
+        // Expose render for Admin iframe
+        window.render = render;
+        
+    </script>
+</body>
+</html>

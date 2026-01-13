@@ -1,0 +1,241 @@
+@import url('https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+
+:root {
+    --font-main: 'Calibri', 'Open Sans', 'Segoe UI', sans-serif;
+    --font-header: 'Caladea', 'Cambria', serif; /* A bit more formal like the image */
+    --text-color: #000000;
+    --link-color: #0000EE;
+    --line-color: #000000;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #525659; /* Gray background for "app" feel */
+    font-family: var(--font-main);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    font-size: 11pt;
+    line-height: 1.35;
+}
+
+/* Page Container - looks like a sheet of paper */
+.cv-container {
+    width: 210mm;
+    min-height: 297mm;
+    background: #ffffff;
+    margin: 0 auto;
+    padding: 15mm 20mm; /* Standard margins */
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    position: relative;
+    /* Ensure no overflow issues */
+    overflow: hidden; 
+}
+
+/* Typography & Header */
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    font-family: var(--font-main); 
+    font-weight: 800;
+    font-size: 18pt; 
+    text-transform: uppercase;
+    margin: 0 0 6px 0;
+    color: #0284c7; /* Sky Blue */
+    letter-spacing: 0.5px;
+}
+
+.header .role {
+    font-weight: 700;
+    font-size: 11pt;
+    margin-bottom: 4px;
+    color: #334155;
+}
+
+.header-extra-item {
+    display: inline-block;
+}
+.header-extra-item::before {
+    content: " | ";
+    margin: 0 4px;
+    color: #000;
+}
+.header-extra-item:first-child::before {
+    content: "";
+}
+
+/* ... */
+
+/* Section Titles */
+.section-title {
+    font-weight: 800;
+    font-size: 11pt;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: #0284c7; /* Sky Blue */
+    border-bottom: 2px solid #0284c7; /* Optional: add line check if user wants? User just said headers. I'll stick to text color first. */
+    display: inline-block; /* For border if I wanted, but let's keep it simple text first as per prev image */
+    letter-spacing: 0.5px;
+}
+
+/* Content Text */
+.content p {
+    margin: 0 0 8px 0;
+    text-align: justify;
+}
+
+/* Skills */
+.skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.skills-label {
+    font-weight: 700;
+}
+
+/* Experience Layout from image */
+.job-entry {
+    margin-bottom: 14px;
+}
+
+.job-top-row {
+    font-weight: 700;
+    font-size: 11pt;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between; /* If date was here, but image has date on second line? Let's check. Image: "Role..." then next line "Company... | Date". */
+}
+/* Actually image is: 
+   Role (Bold)
+   Company (Bold) - Location | Date
+   Let's adjust CSS classes usage in index if needed, but here we style existing hooks.
+*/
+.job-role {
+    font-weight: 700;
+    font-size: 11pt;
+    display: block;
+}
+
+.job-sub-row {
+    font-size: 10.5pt;
+    margin-bottom: 4px;
+}
+
+/* Bullet Points */
+ul {
+    margin: 2px 0 6px 40px; /* Indent like Word */
+    padding: 0;
+    list-style-type: disc;
+}
+
+li {
+    margin-bottom: 4px;
+    padding-left: 5px;
+}
+
+/* Project Block */
+.project-block {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+.project-name {
+    font-weight: 700;
+    margin-bottom: 2px;
+    display: block;
+}
+
+/* Floating Actions */
+.no-print {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 999;
+}
+
+.btn-floating {
+    background: #333;
+    color: #fff;
+    padding: 10px 16px;
+    text-decoration: none;
+    font-family: sans-serif;
+    font-size: 14px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.btn-secondary { background: #2563eb; }
+
+/* PRINT SETTINGS */
+@page {
+    margin: 15mm 0; /* Vertical paging margins */
+    size: auto;
+}
+
+/* Page Break Rules */
+section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Allow large sections like Experience to break, but manage items */
+section[data-section="experience"] {
+    page-break-inside: auto;
+    break-inside: auto;
+}
+
+.job-entry,
+.education-item,
+.package-item,
+.language-item,
+.project-block,
+li {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.section-title, h1, h2, h3, h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+    }
+    
+    .cv-container {
+        width: 100%;
+        max-width: none;
+        box-shadow: none;
+        margin: 0;
+        padding: 0 20mm; /* Side padding only */
+        min-height: auto;
+        overflow: visible; /* Allow content to flow to next page */
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    /* Remove links for print aesthetic if desired, mostly keep them regular */
+    a {
+        text-decoration: none;
+        color: #000;
+    }
+}
