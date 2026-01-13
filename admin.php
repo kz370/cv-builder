@@ -134,39 +134,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = json_decode($jsonContent, true);
             if (!$data) throw new Exception("Invalid JSON file.");
             $mode = $_POST['import_mode'];
-            $pdo->beginTransaction();
-            $tables = ['meta', 'skills', 'experience', 'experience_items', 'packages', 'education', 'certifications', 'languages', 'custom_sections', 'header_extras'];
-            if ($mode === 'replace') {
-                $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-                foreach ($tables as $t) $pdo->exec("DELETE FROM `$t`");
-                $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-                foreach ($data as $table => $rows) {
-                    if (!in_array($table, $tables) || empty($rows)) continue;
-                    $cols = array_keys($rows[0]);
-                    $placeholders = array_fill(0, count($cols), '?');
-                    $sql = "INSERT INTO `$table` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', $placeholders) . ")";
-                    $stmt = $pdo->prepare($sql);
-                    foreach ($rows as $row) $stmt->execute(array_values($row));
-                }
-                $msg = "Database replaced with imported data.";
-            } elseif ($mode === 'update') {
-                 foreach ($data as $table => $rows) {
-                    if (!in_array($table, $tables) || empty($rows)) continue;
-                    if ($table === 'meta') {
-                         $stmt = $pdo->prepare("INSERT INTO meta (`key`, `value`) VALUES (:key, :value) ON DUPLICATE KEY UPDATE `value` = :value");
-                         foreach ($rows as $row) $stmt->execute([':key' => $row['key'], ':value' => $row['value']]);
-                    } else {
-                        $cols = array_keys($rows[0]);
-                        $updateParts = [];
-                        foreach ($cols as $c) if ($c != 'id') $updateParts[] = "`$c` = VALUES(`$c`)";
-                        $sql = "INSERT INTO `$table` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', array_fill(0, count($cols), '?')) . ") ON DUPLICATE KEY UPDATE " . implode(', ', $updateParts);
-                        $stmt = $pdo->prepare($sql);
-                        foreach ($rows as $row) $stmt->execute(array_values($row));
-                    }
+            $msg = performImport($pdo, $data, $mode);
+        }
+        elseif ($action === 'import_json_text') {
+             $jsonContent = $_POST['json_text'] ?? '';
+             if (preg_match('/```json\s*([\s\S]*?)\s*```/', $jsonContent, $matches)) {
+                 $jsonContent = $matches[1];
+             }
+             $data = json_decode($jsonContent, true);
+             if (!$data) throw new Exception("Invalid JSON text.");
+             
+             // Fallback for flat AI structure
+             if(!isset($data['meta']) && isset($data['header_name'])) {
+                 $data['meta'] = [];
+                 $keys = ['header_name', 'header_role', 'header_location', 'header_email', 'header_phone', 'header_linkedin', 'profile_summary', 'section_order'];
+                 foreach ($keys as $k) {
+                     if (isset($data[$k])) $data['meta'][$k] = $data[$k];
                  }
-                 $msg = "Data merged/updated.";
-            }
-            $pdo->commit();
+             }
+
+             // Force replace for AI import as it reconstructs the CV
+             $msg = performImport($pdo, $data, 'replace');
         }
 
         if ($msg) $_SESSION['flash_message'] = $msg;
@@ -191,6 +179,70 @@ function getMeta($pdo) {
     $meta = [];
     foreach($pdo->query("SELECT * FROM meta") as $row) $meta[$row['key']] = $row['value'];
     return $meta;
+}
+
+function performImport($pdo, $data, $mode) {
+    if (!$data) throw new Exception("No data to import.");
+    // Normalize meta if it's Key-Value object (AI Import compatibility)
+    // Note: If calling from import_json_text, we might have already done this, but good to double check or handle here.
+    // If $data['meta'] is associative [key=>val], convert to rows.
+    if (isset($data['meta']) && !isset($data['meta'][0]) && !empty($data['meta'])) {
+         $metaRows = [];
+         foreach ($data['meta'] as $k => $v) { $metaRows[] = ['key' => $k, 'value' => $v]; }
+         $data['meta'] = $metaRows;
+    }
+
+    $pdo->beginTransaction();
+    $tables = ['meta', 'skills', 'experience', 'experience_items', 'packages', 'education', 'certifications', 'languages', 'custom_sections', 'header_extras'];
+    
+    if ($mode === 'replace') {
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+        foreach ($tables as $t) $pdo->exec("DELETE FROM `$t`");
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+        foreach ($data as $table => $rows) {
+            if (!in_array($table, $tables) || empty($rows) || !is_array($rows)) continue;
+            // Ensure rows is array of arrays
+            if(!isset($rows[0])) continue; 
+            
+            $cols = array_keys($rows[0]);
+            $placeholders = array_fill(0, count($cols), '?');
+            $sql = "INSERT INTO `$table` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', $placeholders) . ")";
+            $stmt = $pdo->prepare($sql);
+            foreach ($rows as $row) {
+                // Ensure row matches columns
+                if(count($row) !== count($cols)) continue; 
+                $stmt->execute(array_values($row));
+            }
+        }
+        $pdo->commit();
+        return "Database replaced with imported data.";
+    } elseif ($mode === 'update') {
+         foreach ($data as $table => $rows) {
+            if (!in_array($table, $tables) || empty($rows) || !is_array($rows)) continue;
+            if ($table === 'meta') {
+                 $stmt = $pdo->prepare("INSERT INTO meta (`key`, `value`) VALUES (:key, :value) ON DUPLICATE KEY UPDATE `value` = :value");
+                 foreach ($rows as $row) {
+                     if(isset($row['key']) && isset($row['value'])) 
+                        $stmt->execute([':key' => $row['key'], ':value' => $row['value']]);
+                 }
+            } else {
+                if(!isset($rows[0])) continue; 
+                $cols = array_keys($rows[0]);
+                $updateParts = [];
+                foreach ($cols as $c) if ($c != 'id') $updateParts[] = "`$c` = VALUES(`$c`)";
+                $sql = "INSERT INTO `$table` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', array_fill(0, count($cols), '?')) . ") ON DUPLICATE KEY UPDATE " . implode(', ', $updateParts);
+                $stmt = $pdo->prepare($sql);
+                foreach ($rows as $row) {
+                    if(count($row) !== count($cols)) continue;
+                    $stmt->execute(array_values($row));
+                }
+            }
+         }
+         $pdo->commit();
+         return "Data merged/updated.";
+    }
+    $pdo->rollBack();
+    return "Invalid mode.";
 }
 
 $tab = $_GET['tab'] ?? 'meta';
@@ -1127,6 +1179,20 @@ if (!empty($meta['section_order'])) {
 
         <?php elseif ($tab === 'import_export'): ?>
             <div class="header"><h1>Import / Export Data</h1></div>
+            
+            <div class="card" style="background:#f0f9ff; border-color:#bae6fd;">
+                <h3>AI Import</h3>
+                <p style="margin-bottom:15px; color:#0c4a6e;">Use Artificial Intelligence to extract data from your PDF/Image/Text CV.</p>
+                <a href="ai-help.html" class="btn btn-primary" style="background:#0284c7; width:100%; text-align:center; display:block; margin-bottom:20px;">✨ View AI Instructions & Prompt</a>
+                
+                <form method="POST">
+                    <input type="hidden" name="action" value="import_json_text">
+                    <h4>Paste AI Data</h4>
+                    <p class="text-muted" style="margin-bottom:10px;">Paste the JSON code generated by the AI here:</p>
+                    <textarea name="json_text" rows="6" placeholder='{ "meta": { ... } }' style="font-family:monospace; font-size:12px; margin-bottom:10px;"></textarea>
+                    <button type="submit" class="btn btn-primary">Import JSON Text</button>
+                </form>
+            </div>
             <div class="card">
                 <h3>Export</h3>
                 <a href="?action=export_json" target="_blank" class="btn btn-secondary">⬇ Download JSON Backup</a>
